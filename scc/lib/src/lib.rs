@@ -1,3 +1,6 @@
+#[cfg(all(feature = "ios", feature = "popup"))]
+compile_error!("the `ios` feature cannot be combined with `popup`: there is no native dialog to show");
+
 pub mod api;
 pub mod hints;
 pub mod timestamp;
@@ -9,7 +12,9 @@ use std::{fmt, io, iter, vec};
 use anyhow::Context;
 use api::{SccOutput, SccResult, SccSettings};
 use fd_lock::RwLock;
-use flexi_logger::{Age, Cleanup, Criterion, Duplicate, FileSpec, LogSpecBuilder, Logger, Naming};
+#[cfg(not(feature = "ios"))]
+use flexi_logger::Duplicate;
+use flexi_logger::{Age, Cleanup, Criterion, FileSpec, LogSpecBuilder, Logger, Naming};
 use hashbrown::{HashMap, HashSet};
 use hints::UserHints;
 use log::LevelFilter;
@@ -37,7 +42,21 @@ const REDSCRIPT_SIGNATURE_DEF: &str = "$REDSCRIPT_SIGNATURE";
 pub fn compile(settings: &SccSettings) -> Box<SccResult> {
     setup_logger(&settings.r6_dir);
 
-    match try_compile(settings) {
+    #[cfg(feature = "ios")]
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| try_compile(settings))).unwrap_or_else(
+        |panic| {
+            let msg = panic
+                .downcast_ref::<&str>()
+                .map(|s| (*s).to_owned())
+                .or_else(|| panic.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "unknown panic".to_owned());
+            Err(anyhow::anyhow!("The REDScript compiler has crashed: {msg}"))
+        },
+    );
+    #[cfg(not(feature = "ios"))]
+    let result = try_compile(settings);
+
+    match result {
         Ok(output) => Box::new(output),
         Err(err) => {
             log::error!("{err}");
@@ -241,9 +260,11 @@ fn try_compile_files(
 
 fn setup_logger(r6_dir: &Path) {
     let file = FileSpec::default().directory(r6_dir.join("logs")).basename("redscript");
-    Logger::with(LogSpecBuilder::new().default(LevelFilter::Info).build())
-        .log_to_file(file)
-        .duplicate_to_stdout(Duplicate::All)
+    let logger = Logger::with(LogSpecBuilder::new().default(LevelFilter::Info).build()).log_to_file(file);
+    // the embedded build only writes the log file: the host app owns stdout
+    #[cfg(not(feature = "ios"))]
+    let logger = logger.duplicate_to_stdout(Duplicate::All);
+    logger
         .rotate(Criterion::Age(Age::Day), Naming::Timestamps, Cleanup::KeepLogFiles(4))
         .format(|out, time, msg| write!(out, "[{} - {}] {}", msg.level(), time.now().to_rfc2822(), msg.args()))
         .start()

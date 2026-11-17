@@ -5,7 +5,7 @@ authors.workspace = true
 edition.workspace = true
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib", "staticlib", "rlib"]
 
 [dependencies]
 redscript = { path = "../../core" }
@@ -31,6 +31,9 @@ predicates = "3"
 [features]
 popup = ["msgbox"]
 mmap = ["vmap"]
+# Embedded build (iOS, or macOS with the iOS code path): never shows a native dialog, logs to the file only,
+# and turns a compiler panic into an error result instead of unwinding into (and aborting) the host app.
+ios = []
 
 [lints]
 workspace = true
