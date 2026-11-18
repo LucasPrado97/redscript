@@ -1,12 +1,13 @@
 #!/bin/bash
-# Builds <dir>/r6 the way ~/Downloads/CyPort-scripts/build-scripts.sh does: the original blob as
+# Builds <dir>/r6 the way the Mac script build (build-scripts.sh) does: the original blob as
 # r6/cache/final.redscripts, r6/scripts from the mods in mods.txt and the plugin folders in plugins.txt.
 # Usage: make_workdir.sh <dir>
 set -euo pipefail
 W="${1:?work dir}"
-SCRIPTS="$HOME/Downloads/CyPort-scripts"
-MODS_DIR="$HOME/Downloads/CyPort/Mods Nexus"
-ORIGINAL="$MODS_DIR/_backup-iphone-2026-11-15/final.redscripts.original"
+# CYPORT_SCRIPTS: folder with mods.txt / plugins.txt; MODS_DIR: the mod zips; ORIGINAL: the game's own final.redscripts
+SCRIPTS="${CYPORT_SCRIPTS:?set CYPORT_SCRIPTS (folder with mods.txt and plugins.txt)}"
+MODS_DIR="${MODS_DIR:?set MODS_DIR (folder with the mod zips)}"
+ORIGINAL="${ORIGINAL:?set ORIGINAL (the game's original final.redscripts)}"
 rm -rf "$W"; mkdir -p "$W/r6/cache" "$W/r6/scripts"
 cp "$ORIGINAL" "$W/r6/cache/final.redscripts"
 while IFS= read -r m; do

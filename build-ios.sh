@@ -34,7 +34,7 @@ if [ "${1:-}" = "--test" ]; then
   W="$(mktemp -d)/Documents/Cyberpunk 2077"
   test/make_workdir.sh "$W"
   /usr/bin/time -l dist/compile_test_mac "$W/r6" 2>&1 | grep -E "scc:|check|output|RESULT| real|peak memory"
-  [ -f "$HOME/Downloads/CyPort-scripts/out/final.redscripts" ] &&
-    python3 -I test/compare_blobs.py "$W/r6/cache/final.redscripts" "$HOME/Downloads/CyPort-scripts/out/final.redscripts"
+  REF="${CYPORT_SCRIPTS:-}/out/final.redscripts"   # the Mac scc's output for the same inputs, when CYPORT_SCRIPTS is set
+  [ -n "${CYPORT_SCRIPTS:-}" ] && [ -f "$REF" ] && python3 -I test/compare_blobs.py "$W/r6/cache/final.redscripts" "$REF"
   rm -rf "${W%/Documents/*}"
 fi
